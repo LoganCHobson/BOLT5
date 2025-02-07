@@ -86,3 +86,17 @@ typings/
 
 # DynamoDB Local files
 .dynamodb/
+
+/target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+*.rlib
+*.rmeta
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
