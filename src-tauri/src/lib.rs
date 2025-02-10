@@ -1,10 +1,12 @@
+mod json;
 mod model;
 
+use crate::json::append_conversation;
 use crate::model::{ChatRequest, Config, Message};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
+use std::fs::OpenOptions;
 use tauri::{Emitter, Manager};
 
 #[tauri::command]
@@ -13,14 +15,22 @@ async fn post_chat_completion(
     role: String,
     window: tauri::Window,
 ) -> Result<(), String> {
+    let json = Message {
+        role: "user".to_string(),
+        content: prompt.clone(),
+    };
+
+    append_conversation(json);
+
     let client = Client::new();
 
+    let full_prompt = json::get_history(prompt.clone()).unwrap();
     println!("Sending: {}", prompt);
     let body = ChatRequest {
         model: Config::default().model,
         messages: vec![Message {
             role: "user".to_string(),
-            content: prompt,
+            content: full_prompt,
         }],
         stream: true,
     };
@@ -39,6 +49,8 @@ async fn post_chat_completion(
         ));
     }
 
+    let mut full_response: String = String::new();
+
     while let Some(chunk) = response
         .chunk()
         .await
@@ -51,12 +63,19 @@ async fn post_chat_completion(
 
         if let Some(content) = parsed_chunk["message"]["content"].as_str() {
             println!("Received chunk: {}", content);
+            full_response.push_str(content);
             window
                 .emit("response", content.to_string())
                 .map_err(|e| format!("Error emitting chunk: {}", e))?;
         }
 
         if parsed_chunk["done"].as_bool().unwrap_or(false) {
+            let json = Message {
+                role: "ai".to_string(),
+                content: full_response.clone(),
+            };
+
+            append_conversation(json);
             break;
         }
     }
