@@ -13,7 +13,6 @@ use tauri::{Emitter, Manager};
 async fn post_chat_completion(
     prompt: String,
     role: String,
-    conversation_title: String,
     window: tauri::Window,
 ) -> Result<(), String> {
     let json = Message {
@@ -21,17 +20,15 @@ async fn post_chat_completion(
         content: prompt.clone(),
     };
 
-    append_conversation(json, &conversation_title);
-
     let client = Client::new();
 
-    let full_prompt = json::get_history(prompt.as_str()).unwrap();
+    // let full_prompt = json::get_history(prompt.as_str()).unwrap();
     println!("Sending: {}", prompt);
     let body = ChatRequest {
         model: Config::default().model,
         messages: vec![Message {
             role: "user".to_string(),
-            content: full_prompt,
+            content: prompt,
         }],
         stream: true,
     };
@@ -76,7 +73,6 @@ async fn post_chat_completion(
                 content: full_response.clone(),
             };
 
-            append_conversation(json, conversation_title.as_str());
             break;
         }
     }
@@ -157,7 +153,7 @@ async fn start_conversation(
         .await
         .expect("Failed to create conversation");
 
-    let _ = post_chat_completion(prompt.clone(), role, title.clone(), window).await;
+    //let _ = post_chat_completion(prompt.clone(), role, title.clone(), window).await;
 
     Ok(title)
 }
