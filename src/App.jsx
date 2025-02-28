@@ -11,9 +11,20 @@ function Chat() {
     const [input, setInput] = useState('');        // User input
     const [conversations, setConversations] = useState([]); // List of conversations
     const [currentConversation, setCurrentConversation] = useState(null); // Selected conversation
+    const [newConvo, setNewConvo] = useState(true);  // Track if this is a new conversation
 
     const handleSend = async () => {
         if (!input.trim()) return;
+
+        if (newConvo) {
+            const title = await setupNewConvo(input);  // Wait for the title from getTitle
+            setCurrentConversation(title);  // Set the new conversation title
+            setConversations((prevConvos) => [...prevConvos, title]);  // Add the title to the conversations list
+            setNewConvo(false);  // Reset newConvo flag
+
+            // Don't add the title as a message, just initialize conversation
+            setMessages([{role: 'system', content: `Conversation: ${title}`}]);
+        }
 
         // Add the user's message to the chat history
         setMessages((prevMessages) => [
@@ -42,6 +53,18 @@ function Chat() {
         setConversations([...conversations, newConversation]);
         setCurrentConversation(newConversation);
         setMessages([]); // Reset messages for the new conversation
+
+        setNewConvo(true); // Set newConvo to true to trigger title generation after the first message
+    };
+
+    const setupNewConvo = async (userInput) => {
+        // Simulate a call to backend to generate a title
+        const title = await invoke('setup_new_conversation', {
+            prompt: userInput,
+            role: 'user',
+        });
+
+        return title;  // Return the generated title
     };
 
     const handleConversationClick = (conversation) => {
@@ -110,7 +133,7 @@ function Chat() {
                         borderRadius: '8px',
                         flex: 1,
                         display: 'flex',
-                        flexDirection: 'column',  // Fixing this for correct scroll behavior
+                        flexDirection: 'column',
                     }}
                 >
                     <div style={{flex: 1, overflowY: 'auto'}}>

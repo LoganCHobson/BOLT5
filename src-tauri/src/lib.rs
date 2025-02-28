@@ -81,19 +81,22 @@ async fn post_chat_completion(
 }
 
 #[tauri::command]
-async fn post_chat_generation(
+async fn setup_new_conversation(
     prompt: String,
     role: String,
     window: tauri::Window,
 ) -> Result<String, String> {
     let client = Client::new();
 
-    let prompt = format!("Respond with only a conversation title for: {}", prompt);
+    let prompt = format!(
+        "Respond with only a conversation title for: {}. Keep it succinct",
+        prompt
+    );
     println!("Sending: {}", prompt);
     let body = ChatRequest {
         model: "llama3.2".to_string(),
         messages: vec![Message {
-            role: "user".to_string(),
+            role: "system".to_string(),
             content: prompt,
         }],
         stream: true,
@@ -138,24 +141,9 @@ async fn post_chat_generation(
         }
     }
 
+    create_conversation(&*full_response).await;
+
     Err("Failed to generate conversation title".to_string())
-}
-
-#[tauri::command]
-async fn start_conversation(
-    prompt: String,
-    role: String,
-    window: tauri::Window,
-) -> Result<String, String> {
-    let title = post_chat_generation(prompt.clone(), role.clone(), window.clone()).await?;
-
-    create_conversation(&title)
-        .await
-        .expect("Failed to create conversation");
-
-    //let _ = post_chat_completion(prompt.clone(), role, title.clone(), window).await;
-
-    Ok(title)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -163,8 +151,7 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             post_chat_completion,
-            post_chat_generation,
-            start_conversation,
+            setup_new_conversation,
             get_conversations,
         ])
         .run(tauri::generate_context!())
